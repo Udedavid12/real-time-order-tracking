@@ -55,10 +55,10 @@ def find_nearby(
 @router.get("/{driver_id}/latest", response_model=LocationResponse)
 def get_latest(driver_id: UUID, db: Session = Depends(get_db)):
     service = LocationService(db)
-    loc = service.get_latest(driver_id)
-    if loc is None:
+    data = service.get_latest_cached(driver_id)
+    if data is None:
         raise HTTPException(status_code=404, detail="No location found for driver")
-    return _to_response(loc)
+    return LocationResponse(**data)
 
 
 @router.get("/{driver_id}/history", response_model=list[LocationResponse])
