@@ -1,3 +1,4 @@
+from app.sqs_client import enqueue_location_update
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -41,13 +42,8 @@ async def record_location(payload: LocationCreate, db: Session = Depends(get_db)
 
     response = _to_response(loc)
 
-    await manager.broadcast(
-        payload.driver_id,
-        {
-            "event": "location_update",
-            "data": response.model_dump(mode="json"),
-        },
-    )
+    # Enqueue to SQS for async processing
+    enqueue_location_update(response.model_dump(mode="json"))
 
     return response
 

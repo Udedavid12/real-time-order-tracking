@@ -54,12 +54,7 @@ class LocationService:
             recorded_at=recorded_at,
         )
 
-        # Invalidate the cache — next read will refresh it
-        cache_set(
-            driver_latest_key(str(driver_id)),
-            _serialize_location(location),
-            ttl_seconds=self.CACHE_TTL_SECONDS,
-        )
+        # Cache update happens in the worker — see app/worker.py
 
         return location
 
