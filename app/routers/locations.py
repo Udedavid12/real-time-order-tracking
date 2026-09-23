@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.schemas.location import LocationCreate, LocationResponse
 from app.services.location_service import DriverNotFoundError, LocationService
+from app.websocket_manager import manager
 
 router = APIRouter(prefix="/api/v1/locations", tags=["locations"])
 
@@ -26,7 +27,7 @@ def _to_response(loc) -> LocationResponse:
 
 
 @router.post("", response_model=LocationResponse, status_code=status.HTTP_201_CREATED)
-def record_location(payload: LocationCreate, db: Session = Depends(get_db)):
+async def record_location(payload: LocationCreate, db: Session = Depends(get_db)):
     service = LocationService(db)
     try:
         loc = service.record_location(
@@ -37,7 +38,18 @@ def record_location(payload: LocationCreate, db: Session = Depends(get_db)):
         )
     except DriverNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    return _to_response(loc)
+
+    response = _to_response(loc)
+
+    await manager.broadcast(
+        payload.driver_id,
+        {
+            "event": "location_update",
+            "data": response.model_dump(mode="json"),
+        },
+    )
+
+    return response
 
 
 @router.get("/nearby", response_model=list[LocationResponse])

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 from app.database import Base, engine
-from app.routers import drivers, locations
+from app.routers import drivers, locations, websocket
 
 app = FastAPI(
     title="Real-Time Order Tracking API",
@@ -11,6 +11,7 @@ app = FastAPI(
 
 app.include_router(drivers.router)
 app.include_router(locations.router)
+app.include_router(websocket.router)
 
 
 @app.get("/health")
