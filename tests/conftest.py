@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
-    "postgresql://postgres:postgres@localhost:5432/order_tracking",
+    "postgresql://postgres:postgres@localhost:5432/order_tracking_test",
 )
 
 from app.database import Base, get_db
