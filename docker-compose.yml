@@ -37,9 +37,60 @@ services:
     environment:
       SERVICES: sqs
       DEBUG: 0
-      DATA_DIR: /tmp/localstack/data
+      PERSISTENCE: 1
     volumes:
       - localstack_data:/var/lib/localstack
+      - ./localstack-init:/etc/localstack/init/ready.d
+
+  api:
+    build: .
+    container_name: order_tracking_api
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/order_tracking
+      REDIS_URL: redis://redis:6379
+      SQS_ENDPOINT_URL: http://localstack:4566
+      SQS_QUEUE_URL: http://sqs.us-east-1.localhost.localstack.cloud:4566/000000000000/location_updates
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_REGION: us-east-1
+    extra_hosts:
+      - "sqs.us-east-1.localhost.localstack.cloud:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      localstack:
+        condition: service_started
+    volumes:
+      - ./app:/app/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  worker:
+    build: .
+    container_name: order_tracking_worker
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/order_tracking
+      REDIS_URL: redis://redis:6379
+      SQS_ENDPOINT_URL: http://localstack:4566
+      SQS_QUEUE_URL: http://sqs.us-east-1.localhost.localstack.cloud:4566/000000000000/location_updates
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_REGION: us-east-1
+    extra_hosts:
+      - "sqs.us-east-1.localhost.localstack.cloud:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      localstack:
+        condition: service_started
+    volumes:
+      - ./app:/app/app
+    command: python -m app.worker
 
 volumes:
   postgres_data:

@@ -1,4 +1,3 @@
-from app.sqs_client import enqueue_location_update
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -7,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.schemas.location import LocationCreate, LocationResponse
 from app.services.location_service import DriverNotFoundError, LocationService
-from app.websocket_manager import manager
+from app.sqs_client import enqueue_location_update
 
 router = APIRouter(prefix="/api/v1/locations", tags=["locations"])
 
@@ -42,8 +41,13 @@ async def record_location(payload: LocationCreate, db: Session = Depends(get_db)
 
     response = _to_response(loc)
 
-    # Enqueue to SQS for async processing
-    enqueue_location_update(response.model_dump(mode="json"))
+    # Enqueue to SQS for async processing (worker handles cache + WebSocket)
+    enqueue_location_update(
+        {
+            "event": "location_update",
+            "data": response.model_dump(mode="json"),
+        }
+    )
 
     return response
 
